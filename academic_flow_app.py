@@ -225,9 +225,9 @@ with st.container(border=True):
         if sync_save_data(st.session_state["flow_data"]):
             st.rerun()
 
-# Plot Visual - Clean Mobile Formatting
+# Plot Visual - Bulletproof Mobile Graph & Clean Offsets
 plt.style.use('dark_background')
-fig, ax = plt.subplots(figsize=(8, 4.5), facecolor='#0B0C10')
+fig, ax = plt.subplots(figsize=(8, 4.8), facecolor='#0B0C10')
 ax.set_facecolor('#11131A')
 
 weeks_labels = [f"W{i}" for i in range(1, 21)]
@@ -250,16 +250,18 @@ if valid_x:
         color='#6366F1', linewidth=2.5, 
         label='Flow Horizon'
     )
+    # Vertical annotations so numbers never overlap horizontally
     for x_val, y_val in zip(valid_x, valid_y):
         ax.annotate(
             f"{int(y_val)}", (x_val, y_val), 
             textcoords="offset points", 
-            xytext=(0, 10), ha='center', 
-            fontfamily='sans-serif', fontweight='700', fontsize=8, color='#FFFFFF'
+            xytext=(0, 12), ha='center', va='bottom',
+            fontfamily='sans-serif', fontweight='700', fontsize=8, color='#FFFFFF',
+            rotation=90
         )
 
 # Y-Axis & X-Axis Settings
-ax.set_ylim(0, 330)
+ax.set_ylim(0, 340)
 
 # Rotated X-Axis Labels for clear mobile rendering
 ax.set_xticks(range(20))
