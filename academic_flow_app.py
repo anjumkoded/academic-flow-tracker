@@ -1,5 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
+import requests
+import json
 
 # Page Config
 st.set_page_config(
@@ -122,15 +124,66 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# In-memory session state setup
+# Fetch Credentials Safely
+BIN_ID = st.secrets.get("JSONBIN_BIN_ID", "").strip()
+API_KEY = st.secrets.get("JSONBIN_API_KEY", "").strip()
+
+URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
+HEADERS = {
+    "Content-Type": "application/json",
+    "X-Master-Key": API_KEY
+}
+
+def is_configured():
+    return bool(BIN_ID and API_KEY and "YOUR_" not in BIN_ID)
+
+# Cloud Fetch with Session Sync
+def fetch_cloud_data():
+    if not is_configured():
+        return None
+    try:
+        resp = requests.get(f"{URL}/latest", headers=HEADERS, timeout=5)
+        if resp.status_code == 200:
+            rec = resp.json().get("record", {})
+            if isinstance(rec, dict):
+                return rec
+    except Exception:
+        pass
+    return None
+
+def sync_save_data(data_dict):
+    if not is_configured():
+        st.error("🚨 Setup Error: Cloud database keys are not configured in Streamlit Secrets!")
+        return False
+    try:
+        resp = requests.put(URL, headers=HEADERS, json=data_dict, timeout=5)
+        if resp.status_code == 200:
+            st.toast("🔒 Saved permanently to Cloud!", icon="✅")
+            return True
+        else:
+            st.error(f"Save failed (HTTP {resp.status_code}). Check your JSONBin Master Key.")
+            return False
+    except Exception as e:
+        st.error(f"Network error while saving: {e}")
+        return False
+
+# Load data on cold start
 if "flow_data" not in st.session_state:
-    st.session_state["flow_data"] = {str(i): None for i in range(1, 21)}
+    cloud_rec = fetch_cloud_data()
+    if cloud_rec:
+        st.session_state["flow_data"] = {str(i): cloud_rec.get(str(i)) for i in range(1, 21)}
+    else:
+        st.session_state["flow_data"] = {str(i): None for i in range(1, 21)}
 
 data = st.session_state["flow_data"]
 
-# Brand Header
+# Header
 st.markdown('<div class="brand-title">A C A D E M I A</div>', unsafe_allow_html=True)
 st.markdown('<div class="brand-subtitle">The Arc of Momentum</div>', unsafe_allow_html=True)
+
+# Warning Banner if Cloud Keys are missing
+if not is_configured():
+    st.warning("⚠️ Cloud persistence is OFF! Open Streamlit Cloud Settings -> Secrets and paste your actual JSONBin keys so your data never resets.")
 
 # Dynamic Status Banner
 entered_weeks = [i for i in range(1, 21) if data[str(i)] is not None]
@@ -147,9 +200,9 @@ if len(entered_weeks) >= 2:
 elif len(entered_weeks) == 1:
     st.markdown('<div class="status-card status-neutral">🕯️ "The journey begins. Week 1 is inscribed."</div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div class="status-card status-neutral">⚡ "Log your first week score below."</div>', unsafe_allow_html=True)
+    st.markdown('<div class="status-card status-neutral">⚡ "Log your scores to render the horizon."</div>', unsafe_allow_html=True)
 
-# Control Center Container
+# Input Control Block
 with st.container(border=True):
     col1, col2 = st.columns(2)
     
@@ -169,9 +222,10 @@ with st.container(border=True):
 
     if st.button("Log Progression", type="primary", use_container_width=True):
         st.session_state["flow_data"][week_num] = val_input
-        st.rerun()
+        if sync_save_data(st.session_state["flow_data"]):
+            st.rerun()
 
-# Plot Setup
+# Plot Visual
 plt.style.use('dark_background')
 fig, ax = plt.subplots(figsize=(8, 3.8), facecolor='#0B0C10')
 ax.set_facecolor('#11131A')
@@ -186,7 +240,7 @@ for i in range(1, 21):
         valid_x.append(f"W{i}")
         valid_y.append(val)
 
-# Ambient Red Baseline at 150
+# Ambient Baseline at 150
 ax.axhline(y=150, color='#F87171', linestyle=':', linewidth=1.1, alpha=0.5, label='Baseline (150)')
 
 if valid_x:
@@ -226,6 +280,8 @@ col_a, col_b, col_c = st.columns([1, 2, 1])
 with col_b:
     st.markdown('<div class="reset-btn">', unsafe_allow_html=True)
     if st.button("Reset Matrix", use_container_width=True):
-        st.session_state["flow_data"] = {str(i): None for i in range(1, 21)}
+        empty_data = {str(i): None for i in range(1, 21)}
+        st.session_state["flow_data"] = empty_data
+        sync_save_data(empty_data)
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
