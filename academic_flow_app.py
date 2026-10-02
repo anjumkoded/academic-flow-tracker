@@ -167,7 +167,7 @@ def sync_save_data(data_dict):
         st.error(f"Network error while saving: {e}")
         return False
 
-# Load data on start
+# Load data on cold start
 if "flow_data" not in st.session_state:
     cloud_rec = fetch_cloud_data()
     if cloud_rec:
@@ -225,9 +225,9 @@ with st.container(border=True):
         if sync_save_data(st.session_state["flow_data"]):
             st.rerun()
 
-# Plot Visual - Bulletproof Styling & Hex Color Standards
+# Plot Visual - Clean Mobile Formatting
 plt.style.use('dark_background')
-fig, ax = plt.subplots(figsize=(8, 4.2), facecolor='#0B0C10')
+fig, ax = plt.subplots(figsize=(8, 4.5), facecolor='#0B0C10')
 ax.set_facecolor('#11131A')
 
 weeks_labels = [f"W{i}" for i in range(1, 21)]
@@ -254,17 +254,17 @@ if valid_x:
         ax.annotate(
             f"{int(y_val)}", (x_val, y_val), 
             textcoords="offset points", 
-            xytext=(0, 9), ha='center', 
-            fontfamily='sans-serif', fontweight='700', fontsize=9, color='#FFFFFF'
+            xytext=(0, 10), ha='center', 
+            fontfamily='sans-serif', fontweight='700', fontsize=8, color='#FFFFFF'
         )
 
-# Y-Axis & X-Axis Spacing Fixes
+# Y-Axis & X-Axis Settings
 ax.set_ylim(0, 330)
-ax.set_xlim(-0.8, 19.8)
-ax.set_xticks(range(20))
 
-ax.set_xticklabels(weeks_labels, color='#9CA3AF', fontsize=7.5, fontweight='600')
-ax.tick_params(axis='x', pad=6)
+# Rotated X-Axis Labels for clear mobile rendering
+ax.set_xticks(range(20))
+ax.set_xticklabels(weeks_labels, color='#9CA3AF', fontsize=6.5, fontweight='600', rotation=45)
+ax.tick_params(axis='x', pad=3)
 ax.tick_params(axis='y', colors='#6B7280', labelsize=8)
 
 for spine in ['top', 'right', 'left', 'bottom']:
@@ -272,15 +272,15 @@ for spine in ['top', 'right', 'left', 'bottom']:
 
 ax.grid(True, linestyle='--', alpha=0.08, color='#FFFFFF')
 
-# High-contrast, clean legend
+# High-contrast legend using valid hex colors
 ax.legend(
     loc='upper right', 
     frameon=True, 
     facecolor='#161822', 
     edgecolor='#2A2D3D', 
     labelcolor='#E0E2EC', 
-    fontsize=8.5,
-    prop={'weight': '600', 'size': 8.5}
+    fontsize=8,
+    prop={'weight': '600', 'size': 8}
 )
 
 plt.tight_layout()
