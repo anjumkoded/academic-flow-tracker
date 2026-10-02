@@ -1,7 +1,5 @@
 import streamlit as st
 import matplotlib.pyplot as plt
-import requests
-import json
 
 # Page Config
 st.set_page_config(
@@ -11,54 +9,56 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom High-End Minimal & Poetic CSS
+# Custom High-End Minimal & Poetic CSS + Mobile Scroll Fixes
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;600&display=swap');
 
-    /* Global Dark Canvas */
-    .stApp {
+    html, body, .stApp {
         background: #0B0C10;
         font-family: 'Plus Jakarta Sans', sans-serif;
         color: #E0E2EC;
+        -webkit-overflow-scrolling: touch !important;
+        overflow-y: auto !important;
     }
 
-    /* Hide default clutter */
     header, footer, #MainMenu { visibility: hidden; display: none; }
-    .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 480px; }
+    .block-container { 
+        padding-top: 1rem !important; 
+        padding-bottom: 2rem !important; 
+        max-width: 440px !important; 
+    }
 
-    /* Minimalist Title Area */
     .brand-title {
         font-family: 'Cinzel', serif;
-        font-size: 2.2rem;
+        font-size: 1.8rem;
         font-weight: 600;
         letter-spacing: 0.12em;
         background: linear-gradient(135deg, #FFFFFF 0%, #A5B4FC 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.1rem;
     }
     
     .brand-subtitle {
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         font-weight: 300;
         color: #6366F1;
         text-align: center;
-        letter-spacing: 0.25em;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
-        margin-bottom: 1.8rem;
+        margin-bottom: 1rem;
     }
 
-    /* Poetic Banner Cards */
     .status-card {
-        padding: 16px 20px;
-        border-radius: 16px;
-        font-size: 0.9rem;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-size: 0.85rem;
         font-weight: 400;
         letter-spacing: 0.02em;
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
         backdrop-filter: blur(12px);
     }
     .status-cooking {
@@ -77,20 +77,18 @@ st.markdown("""
         color: #818CF8;
     }
 
-    /* Input Glass Cards */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background: rgba(21, 23, 30, 0.7) !important;
         border: 1px solid rgba(255, 255, 255, 0.06) !important;
-        border-radius: 20px !important;
-        padding: 18px !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        margin-bottom: 1.5rem;
+        border-radius: 16px !important;
+        padding: 14px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        margin-bottom: 1rem !important;
     }
 
-    /* Selectbox & Inputs */
     div[data-baseweb="select"] > div, div[data-baseweb="input"] > div {
         background-color: #161822 !important;
-        border-radius: 12px !important;
+        border-radius: 10px !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         color: #E0E2EC !important;
     }
@@ -100,75 +98,41 @@ st.markdown("""
         font-family: 'Plus Jakarta Sans', sans-serif !important;
     }
 
-    /* Elegant Indigo Glow Button */
     .stButton > button {
         background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%) !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 14px !important;
+        border-radius: 12px !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
         font-weight: 600 !important;
-        font-size: 0.9rem !important;
+        font-size: 0.88rem !important;
         letter-spacing: 0.05em !important;
-        padding: 12px !important;
-        box-shadow: 0 4px 20px rgba(79, 70, 229, 0.35) !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    
-    .stButton > button:hover {
-        box-shadow: 0 6px 24px rgba(79, 70, 229, 0.55) !important;
-        transform: translateY(-1px) !important;
+        padding: 10px !important;
+        box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35) !important;
     }
 
-    /* Secondary Reset Button */
     .reset-btn > div > button {
         background: transparent !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         color: #6B7280 !important;
         box-shadow: none !important;
-    }
-    .reset-btn > div > button:hover {
-        color: #EF4444 !important;
-        border-color: rgba(239, 68, 68, 0.3) !important;
+        padding: 6px !important;
+        font-size: 0.75rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Read Secrets
-BIN_ID = st.secrets["JSONBIN_BIN_ID"]
-API_KEY = st.secrets["JSONBIN_API_KEY"]
+# In-memory session state setup
+if "flow_data" not in st.session_state:
+    st.session_state["flow_data"] = {str(i): None for i in range(1, 21)}
 
-URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
-HEADERS = {
-    "Content-Type": "application/json",
-    "X-Master-Key": API_KEY
-}
-
-# Helper functions for JSONBin
-def load_data():
-    try:
-        response = requests.get(f"{URL}/latest", headers=HEADERS)
-        if response.status_code == 200:
-            return response.json().get("record", {})
-    except Exception:
-        pass
-    return {}
-
-def save_data(data_dict):
-    try:
-        requests.put(URL, headers=HEADERS, json=data_dict)
-    except Exception as e:
-        st.error(f"Error saving data: {e}")
-
-# Fetch remote data
-raw_data = load_data()
-data = {str(i): raw_data.get(str(i)) for i in range(1, 21)}
+data = st.session_state["flow_data"]
 
 # Brand Header
 st.markdown('<div class="brand-title">A C A D E M I A</div>', unsafe_allow_html=True)
 st.markdown('<div class="brand-subtitle">The Arc of Momentum</div>', unsafe_allow_html=True)
 
-# Dynamic Poetic Status Banners
+# Dynamic Status Banner
 entered_weeks = [i for i in range(1, 21) if data[str(i)] is not None]
 
 if len(entered_weeks) >= 2:
@@ -182,6 +146,8 @@ if len(entered_weeks) >= 2:
         st.markdown('<div class="status-card status-neutral">⚡ "Equilibrium. Hold steady before the breakout."</div>', unsafe_allow_html=True)
 elif len(entered_weeks) == 1:
     st.markdown('<div class="status-card status-neutral">🕯️ "The journey begins. Week 1 is inscribed."</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="status-card status-neutral">⚡ "Log your first week score below."</div>', unsafe_allow_html=True)
 
 # Control Center Container
 with st.container(border=True):
@@ -202,13 +168,12 @@ with st.container(border=True):
         )
 
     if st.button("Log Progression", type="primary", use_container_width=True):
-        data[week_num] = val_input
-        save_data(data)
+        st.session_state["flow_data"][week_num] = val_input
         st.rerun()
 
-# Canvas Style Matplotlib Visual
+# Plot Setup
 plt.style.use('dark_background')
-fig, ax = plt.subplots(figsize=(10, 4.8), facecolor='#0B0C10')
+fig, ax = plt.subplots(figsize=(8, 3.8), facecolor='#0B0C10')
 ax.set_facecolor('#11131A')
 
 weeks_labels = [f"W{i}" for i in range(1, 21)]
@@ -222,50 +187,45 @@ for i in range(1, 21):
         valid_y.append(val)
 
 # Ambient Red Baseline at 150
-ax.axhline(y=150, color='#F87171', linestyle=':', linewidth=1.2, alpha=0.5, label='Baseline (150)')
+ax.axhline(y=150, color='#F87171', linestyle=':', linewidth=1.1, alpha=0.5, label='Baseline (150)')
 
-# Glowing Indigo Curve & Soft Data Nodes
 if valid_x:
     ax.plot(
         valid_x, valid_y, 
-        marker='o', markersize=6, markerfacecolor='#818CF8', markeredgecolor='#FFFFFF', markeredgewidth=1.2,
-        color='#6366F1', linewidth=2.5, 
+        marker='o', markersize=5, markerfacecolor='#818CF8', markeredgecolor='#FFFFFF', markeredgewidth=1.0,
+        color='#6366F1', linewidth=2.2, 
         label='Flow Horizon'
     )
     for x_val, y_val in zip(valid_x, valid_y):
         ax.annotate(
             f"{y_val:g}", (x_val, y_val), 
             textcoords="offset points", 
-            xytext=(0, 9), ha='center', 
-            fontfamily='sans-serif', fontweight='600', fontsize=8.5, color='#F3F4F6'
+            xytext=(0, 7), ha='center', 
+            fontfamily='sans-serif', fontweight='600', fontsize=8, color='#F3F4F6'
         )
 
-# Axis & Grid Formatting
 ax.set_ylim(0, 310)
 ax.set_xlim(-0.5, 19.5)
 ax.set_xticks(range(20))
-ax.set_xticklabels(weeks_labels, rotation=0, color='#4B5563', fontsize=7.5, fontweight='500')
-ax.tick_params(axis='y', colors='#4B5563', labelsize=8)
+ax.set_xticklabels(weeks_labels, rotation=0, color='#4B5563', fontsize=7, fontweight='500')
+ax.tick_params(axis='y', colors='#4B5563', labelsize=7.5)
 
-# Clean Spines
 for spine in ['top', 'right', 'left', 'bottom']:
     ax.spines[spine].set_visible(False)
 
 ax.grid(True, linestyle='-', alpha=0.04, color='#FFFFFF')
-ax.legend(loc='upper left', frameon=False, labelcolor='#6B7280', fontsize=8.5)
+ax.legend(loc='upper left', frameon=False, labelcolor='#6B7280', fontsize=8)
 
 plt.tight_layout()
 
-# Render Chart inside Glass Container
-with st.container(border=True):
-    st.pyplot(fig)
+# Render Chart
+st.pyplot(fig)
 
-# Minimal Reset Button
+# Reset Button
 col_a, col_b, col_c = st.columns([1, 2, 1])
 with col_b:
     st.markdown('<div class="reset-btn">', unsafe_allow_html=True)
     if st.button("Reset Matrix", use_container_width=True):
-        empty_data = {str(i): None for i in range(1, 21)}
-        save_data(empty_data)
+        st.session_state["flow_data"] = {str(i): None for i in range(1, 21)}
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
