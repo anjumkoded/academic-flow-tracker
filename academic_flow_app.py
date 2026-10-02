@@ -225,7 +225,7 @@ with st.container(border=True):
         if sync_save_data(st.session_state["flow_data"]):
             st.rerun()
 
-# Plot Visual - Fixed Typography & Layout Spacing
+# Plot Visual - Bulletproof Styling & Hex Color Standards
 plt.style.use('dark_background')
 fig, ax = plt.subplots(figsize=(8, 4.2), facecolor='#0B0C10')
 ax.set_facecolor('#11131A')
@@ -277,7 +277,7 @@ ax.legend(
     loc='upper right', 
     frameon=True, 
     facecolor='#161822', 
-    edgecolor='rgba(255, 255, 255, 0.1)', 
+    edgecolor='#2A2D3D', 
     labelcolor='#E0E2EC', 
     fontsize=8.5,
     prop={'weight': '600', 'size': 8.5}
